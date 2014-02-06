@@ -1,28 +1,27 @@
 package com.eviware.soapui.impl.rest.mock;
 
-import com.eviware.soapui.SoapUI;
-import com.eviware.soapui.config.*;
+import com.eviware.soapui.config.RESTMockActionConfig;
+import com.eviware.soapui.config.RESTMockResponseConfig;
 import com.eviware.soapui.impl.rest.RestRequest;
+import com.eviware.soapui.impl.rest.RestRequestInterface.RequestMethod;
 import com.eviware.soapui.impl.rest.RestResource;
 import com.eviware.soapui.impl.support.AbstractMockOperation;
 import com.eviware.soapui.impl.wsdl.mock.DispatchException;
-import com.eviware.soapui.model.iface.Interface;
 import com.eviware.soapui.model.iface.Operation;
 import com.eviware.soapui.support.StringUtils;
 
 import java.beans.PropertyChangeEvent;
-import java.util.ArrayList;
 import java.util.List;
 
 public class RestMockAction extends AbstractMockOperation<RESTMockActionConfig, RestMockResponse>
 {
 	private RestResource resource = null;
 
-	public RestMockAction( RestMockService mockService, RESTMockActionConfig config, RestRequest request )
+	public RestMockAction( RestMockService mockService, RESTMockActionConfig config )
 	{
 		super( config, mockService, RestMockAction.getIconName( config ) );
 
-		resource = request.getResource().getParentResource();
+		mockService.getMockOperationByName( config.getName() );
 
 		List<RESTMockResponseConfig> responseConfigs = config.getResponseList();
 		for( RESTMockResponseConfig responseConfig : responseConfigs )
@@ -33,6 +32,12 @@ public class RestMockAction extends AbstractMockOperation<RESTMockActionConfig, 
 		}
 
 		super.setupConfig(config);
+	}
+
+	public RestMockAction( RestMockService mockService, RESTMockActionConfig config, RestRequest request )
+	{
+		this( mockService, config );
+		resource = request.getResource();
 	}
 
 	public static String getIconName(RESTMockActionConfig methodConfig)
@@ -65,15 +70,19 @@ public class RestMockAction extends AbstractMockOperation<RESTMockActionConfig, 
 
 	}
 
-	public RestMockResponse addNewMockResponse( RESTMockResponseConfig responseConfig )
+	public RestMockResponse addNewMockResponse( String name )
 	{
-		RestMockResponse mockResponse = new RestMockResponse( this, responseConfig );
 
+		RESTMockResponseConfig restMockResponseConfig = getConfig().addNewResponse();
+		restMockResponseConfig.setName( name );
+
+		RestMockResponse mockResponse = new RestMockResponse( this, restMockResponseConfig );
 		addMockResponse( mockResponse );
 
-		if( getMockResponseCount() == 1 && responseConfig.getResponseContent() != null )
+
+		if( getMockResponseCount() == 1 && restMockResponseConfig.getResponseContent() != null )
 		{
-			setDefaultResponse( responseConfig.getResponseContent().toString() );
+			setDefaultResponse( restMockResponseConfig.getResponseContent().toString() );
 		}
 
 		( getMockService() ).fireMockResponseAdded( mockResponse );
@@ -112,10 +121,17 @@ public class RestMockAction extends AbstractMockOperation<RESTMockActionConfig, 
 		}
 		catch( Throwable e )
 		{
-			if( e instanceof DispatchException )
-				throw ( DispatchException )e;
-			else
-				throw new DispatchException( e );
+			throw new DispatchException( e );
 		}
+	}
+
+	public String getPath()
+	{
+		return getConfig().getResourcePath();
+	}
+
+	public RequestMethod getMethod()
+	{
+		return RequestMethod.valueOf( getConfig().getMethod() );
 	}
 }

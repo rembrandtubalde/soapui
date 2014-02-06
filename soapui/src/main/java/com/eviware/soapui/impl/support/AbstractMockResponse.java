@@ -2,6 +2,7 @@ package com.eviware.soapui.impl.support;
 
 import com.eviware.soapui.SoapUI;
 import com.eviware.soapui.config.BaseMockResponseConfig;
+import com.eviware.soapui.config.CompressedStringConfig;
 import com.eviware.soapui.config.HeaderConfig;
 import com.eviware.soapui.impl.wsdl.AbstractWsdlModelItem;
 import com.eviware.soapui.impl.wsdl.MutableWsdlAttachmentContainer;
@@ -59,8 +60,7 @@ public abstract class AbstractMockResponse<MockResponseConfigType extends BaseMo
 
 	public AbstractMockResponse( MockResponseConfigType config, MockOperation operation, String icon )
 	{
-		super( config, operation, "/mockResponse.gif" )
-		;
+		super( config, operation, icon );
 		scriptEnginePool = new ScriptEnginePool( this );
 		scriptEnginePool.setScript( getScript() );
 		propertyHolder = new MapTestPropertyHolder( this );
@@ -95,7 +95,17 @@ public abstract class AbstractMockResponse<MockResponseConfigType extends BaseMo
 			return;
 
 		this.responseContent = responseContent;
+
+		setConfigResponseContent( responseContent );
+
 		notifyPropertyChanged( RESPONSE_CONTENT_PROPERTY, oldContent, responseContent );
+	}
+
+	private void setConfigResponseContent( String responseContent )
+	{
+		CompressedStringConfig compressedResponseContent = CompressedStringConfig.Factory.newInstance();
+		compressedResponseContent.setStringValue( responseContent );
+		getConfig().setResponseContent( compressedResponseContent );
 	}
 
 	public StringToStringsMap getResponseHeaders()
@@ -284,7 +294,8 @@ public abstract class AbstractMockResponse<MockResponseConfigType extends BaseMo
 				{
 					mp = new MimeMultipart();
 
-					MessageXmlObject requestXmlObject = new MessageXmlObject( (WsdlOperation)operation, responseContent, false );
+					WsdlOperation wsdlOperation = ( ( WsdlMockOperation )operation ).getOperation();
+					MessageXmlObject requestXmlObject = new MessageXmlObject( wsdlOperation, responseContent, false );
 					MessageXmlPart[] requestParts = requestXmlObject.getMessageParts();
 					for( MessageXmlPart requestPart : requestParts )
 					{
@@ -295,7 +306,7 @@ public abstract class AbstractMockResponse<MockResponseConfigType extends BaseMo
 				}
 				catch( Exception e )
 				{
-					e.printStackTrace();
+					SoapUI.logError( e );
 				}
 			}
 		}
